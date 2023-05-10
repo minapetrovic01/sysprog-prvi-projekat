@@ -22,5 +22,10 @@ namespace Projekat1
             _cache = new Cache(cacheSize);
             _rootDirPath = rootPath;
         }
+
+        public void Run()
+        {
+            throw new NotImplementedException();
+        }
     }
 }
