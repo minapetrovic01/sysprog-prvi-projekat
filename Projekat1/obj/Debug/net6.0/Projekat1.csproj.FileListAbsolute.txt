@@ -1,0 +1,15 @@
+D:\ELFAK\SistemskoProgramiranje\Projekat1\Projekat1\bin\Debug\net6.0\Projekat1.exe
+D:\ELFAK\SistemskoProgramiranje\Projekat1\Projekat1\bin\Debug\net6.0\Projekat1.deps.json
+D:\ELFAK\SistemskoProgramiranje\Projekat1\Projekat1\bin\Debug\net6.0\Projekat1.runtimeconfig.json
+D:\ELFAK\SistemskoProgramiranje\Projekat1\Projekat1\bin\Debug\net6.0\Projekat1.dll
+D:\ELFAK\SistemskoProgramiranje\Projekat1\Projekat1\bin\Debug\net6.0\Projekat1.pdb
+D:\ELFAK\SistemskoProgramiranje\Projekat1\Projekat1\obj\Debug\net6.0\Projekat1.csproj.AssemblyReference.cache
+D:\ELFAK\SistemskoProgramiranje\Projekat1\Projekat1\obj\Debug\net6.0\Projekat1.GeneratedMSBuildEditorConfig.editorconfig
+D:\ELFAK\SistemskoProgramiranje\Projekat1\Projekat1\obj\Debug\net6.0\Projekat1.AssemblyInfoInputs.cache
+D:\ELFAK\SistemskoProgramiranje\Projekat1\Projekat1\obj\Debug\net6.0\Projekat1.AssemblyInfo.cs
+D:\ELFAK\SistemskoProgramiranje\Projekat1\Projekat1\obj\Debug\net6.0\Projekat1.csproj.CoreCompileInputs.cache
+D:\ELFAK\SistemskoProgramiranje\Projekat1\Projekat1\obj\Debug\net6.0\Projekat1.dll
+D:\ELFAK\SistemskoProgramiranje\Projekat1\Projekat1\obj\Debug\net6.0\refint\Projekat1.dll
+D:\ELFAK\SistemskoProgramiranje\Projekat1\Projekat1\obj\Debug\net6.0\Projekat1.pdb
+D:\ELFAK\SistemskoProgramiranje\Projekat1\Projekat1\obj\Debug\net6.0\Projekat1.genruntimeconfig.cache
+D:\ELFAK\SistemskoProgramiranje\Projekat1\Projekat1\obj\Debug\net6.0\ref\Projekat1.dll
