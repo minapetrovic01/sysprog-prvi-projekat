@@ -16,7 +16,8 @@ namespace Projekat1
         private readonly string _rootDirPath;
         private object _lock = new object();//koristim ga za zakljucavanje logovanja u fajl i konzolu
         private readonly string _cachedFilesPath;
-
+        private HashSet<string> _openFiles;//za open files u koje se upisuje
+        private object _lockSet = new object();
         public WebServer(string url,string rootPath,string cachedPath, int port=80, int cacheSize=32)
         {
             _url = url;
@@ -24,6 +25,7 @@ namespace Projekat1
             _cache = new Cache(cacheSize);
             _rootDirPath = rootPath;
             _cachedFilesPath = cachedPath;
+            _openFiles = new HashSet<string>();
         }
 
         public void Run()
@@ -44,20 +46,18 @@ namespace Projekat1
                     {
                         try
                         {
+                            string toLog = "";
                             HttpListenerContext httpListenerContext = (HttpListenerContext)listenerContext;
                             if (httpListenerContext == null)
                                 throw new Exception("Can't parse given object to HttpListenerContext object!");
                             string fileName=Path.GetFileName(httpListenerContext.Request.Url.LocalPath);
                             string fileExtension = Path.GetExtension(fileName).TrimStart('.');
                             // Console.WriteLine(fileName+" "+fileExtension);
-
-                            lock (_lock)
-                            {
-                                Console.WriteLine("NEW REQUEST");
-                                Console.WriteLine($"Requested filename is:{fileName}");
-                            }
+                            toLog+=($"\nNEW REQUEST\nRequested filename is:{fileName}\n");
 
                             string validation = this.ValidateRequest(httpListenerContext, fileName, fileExtension);
+
+                            toLog+="VALID=" +validation+"\n";
 
                             if (validation!="OK")
                             {
@@ -67,9 +67,52 @@ namespace Projekat1
 
                             if (_cache.Contains(fileName))
                             {
-                                this.SendResponse(httpListenerContext, _cachedFilesPath + "/" + fileName, true);
+                                toLog += "FILE WAS ALREADY TRANSLATED AND IN CACHE\n";
+                                this.SendResponse(httpListenerContext,$"FILE{fileName} is translated", true);
+                                return;
                             }
 
+                            string[] files=Directory.GetFiles(_rootDirPath,fileName);
+                            if(files.Length==0)
+                            {
+                                toLog += "FILE NOT FOUND IN DIRECTORY";
+                                this.SendResponse(httpListenerContext, "NO SUCH FILE IN ROOT DIR", false);
+                                return;
+                            }
+
+                            //u ovom poslednjem slucaju prevodim file
+                            string toTranslate = files[0];
+                            string newFileName = Path.GetFileNameWithoutExtension(fileName);
+                            if(fileExtension=="txt")
+                            {
+                                byte[] fileBytes;
+                                using (FileStream fs = new FileStream(toTranslate, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                {
+                                    fileBytes = new byte[fs.Length];
+                                    int bytesRead = fs.Read(fileBytes, 0, fileBytes.Length);
+                                    if (bytesRead != fileBytes.Length)
+                                    {
+                                        throw new IOException("Could not read the whole file");
+                                    }
+                                }
+                                if(fileBytes.Length > 0)
+                                {
+                                    newFileName += ".bin";
+                                    lock (_lockSet)
+                                    {
+                                        if(!_openFiles.Contains(newFileName))
+                                        {
+                                            _openFiles.Add(newFileName);
+                                            File.WriteAllBytes(_cachedFilesPath+"/"+newFileName, fileBytes);
+                                        }
+                                       
+                                    }
+                                }
+                            }
+                            else
+                            {
+
+                            }
 
                             
                         }
