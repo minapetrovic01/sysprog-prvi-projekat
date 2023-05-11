@@ -16,21 +16,20 @@ namespace Projekat1
         private readonly string _rootDirPath;
         private object _lock = new object();//koristim ga za zakljucavanje logovanja u fajl i konzolu
         private readonly string _cachedFilesPath;
-        private HashSet<string> _openFiles;//za open files u koje se upisuje
-        private object _lockSet = new object();
-        public WebServer(string url,string rootPath,string cachedPath, int port=80, int cacheSize=32)
+        private readonly Dictionary<string, object> _fileLocks = new Dictionary<string, object>();
+        private object _lockLock = new object();
+        public WebServer(string url, string rootPath, string cachedPath, int port = 80, int cacheSize = 32)
         {
             _url = url;
             _port = port;
             _cache = new Cache(cacheSize);
             _rootDirPath = rootPath;
             _cachedFilesPath = cachedPath;
-            _openFiles = new HashSet<string>();
         }
 
         public void Run()
         {
-           using(HttpListener listener=new HttpListener())
+            using (HttpListener listener = new HttpListener())
             {
                 string urlListener = _url + $":{_port}/";
                 listener.Prefixes.Add(urlListener);
@@ -40,26 +39,29 @@ namespace Projekat1
 
                 while (listener.IsListening)
                 {
+
                     HttpListenerContext context = listener.GetContext();
+
 
                     ThreadPool.QueueUserWorkItem((object listenerContext) =>
                     {
+                        string toLog = "";
                         try
                         {
-                            string toLog = "";
+
                             HttpListenerContext httpListenerContext = (HttpListenerContext)listenerContext;
                             if (httpListenerContext == null)
                                 throw new Exception("Can't parse given object to HttpListenerContext object!");
-                            string fileName=Path.GetFileName(httpListenerContext.Request.Url.LocalPath);
+                            string fileName = Path.GetFileName(httpListenerContext.Request.Url.LocalPath);
                             string fileExtension = Path.GetExtension(fileName).TrimStart('.');
                             // Console.WriteLine(fileName+" "+fileExtension);
-                            toLog+=($"\nNEW REQUEST\nRequested filename is:{fileName}\n");
+                            toLog += ($"\nNEW REQUEST\nRequested filename is:{fileName}\n");
 
                             string validation = this.ValidateRequest(httpListenerContext, fileName, fileExtension);
 
-                            toLog+="VALID=" +validation+"\n";
+                            toLog += "VALID=" + validation + "\n";
 
-                            if (validation!="OK")
+                            if (validation != "OK")
                             {
                                 this.SendResponse(httpListenerContext, validation, false);
                                 return;
@@ -68,12 +70,12 @@ namespace Projekat1
                             if (_cache.Contains(fileName))
                             {
                                 toLog += "FILE WAS ALREADY TRANSLATED AND IN CACHE\n";
-                                this.SendResponse(httpListenerContext,$"FILE{fileName} is translated", true);
+                                this.SendResponse(httpListenerContext, $"FILE{fileName} is translated", true);
                                 return;
                             }
 
-                            string[] files=Directory.GetFiles(_rootDirPath,fileName);
-                            if(files.Length==0)
+                            string[] files = Directory.GetFiles(_rootDirPath, fileName);
+                            if (files.Length == 0)
                             {
                                 toLog += "FILE NOT FOUND IN DIRECTORY";
                                 this.SendResponse(httpListenerContext, "NO SUCH FILE IN ROOT DIR", false);
@@ -83,44 +85,98 @@ namespace Projekat1
                             //u ovom poslednjem slucaju prevodim file
                             string toTranslate = files[0];
                             string newFileName = Path.GetFileNameWithoutExtension(fileName);
-                            if(fileExtension=="txt")
+
+                            
+
+                            byte[] fileBytes;
+                            using (FileStream fs = new FileStream(toTranslate, FileMode.Open, FileAccess.Read, FileShare.Read))
                             {
-                                byte[] fileBytes;
-                                using (FileStream fs = new FileStream(toTranslate, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                fileBytes = new byte[fs.Length];
+                                int bytesRead = fs.Read(fileBytes, 0, fileBytes.Length);
+                                if (bytesRead != fileBytes.Length)
                                 {
-                                    fileBytes = new byte[fs.Length];
-                                    int bytesRead = fs.Read(fileBytes, 0, fileBytes.Length);
-                                    if (bytesRead != fileBytes.Length)
+                                    throw new IOException("Could not read the whole file");
+                                }
+                            }
+                            if (fileBytes.Length <= 0)
+                            {
+                                toLog += "FILE IS EMPTY";
+                                this.SendResponse(httpListenerContext, "FILE IS EMPTY", false);
+                                return;
+                            }
+
+
+                            if (fileExtension == "txt")
+                            {
+                                newFileName += ".bin";
+                                string filePath = _cachedFilesPath + "/" + newFileName;
+                                object fileLock;
+
+                                lock (_lockLock)
+                                {
+                                    if (!_fileLocks.TryGetValue(filePath, out fileLock))
                                     {
-                                        throw new IOException("Could not read the whole file");
+                                        fileLock = new object();
+                                        _fileLocks.Add(filePath, fileLock);
                                     }
                                 }
-                                if(fileBytes.Length > 0)
+
+                                lock (fileLock)
                                 {
-                                    newFileName += ".bin";
-                                    lock (_lockSet)
-                                    {
-                                        if(!_openFiles.Contains(newFileName))
-                                        {
-                                            _openFiles.Add(newFileName);
-                                            File.WriteAllBytes(_cachedFilesPath+"/"+newFileName, fileBytes);
-                                        }
-                                       
-                                    }
+                                    File.WriteAllBytes(filePath, fileBytes);
                                 }
+                                _cache.Add(fileName);
+                                toLog += "TRANSLATED TO .bin and is placed in cache folder";
+                                this.SendResponse(httpListenerContext, "TRANSLATED TO .bin and is placed in cache folder", true);
+                                return;
                             }
                             else
                             {
 
+                                newFileName += ".txt";
+                                string filePath = _cachedFilesPath + "/" + newFileName;
+                                object fileLock;
+                                string text = Encoding.UTF8.GetString(fileBytes);
+
+                                lock (_lockLock)
+                                {
+                                    if (!_fileLocks.TryGetValue(filePath, out fileLock))
+                                    {
+                                        fileLock = new object();
+                                        _fileLocks.Add(filePath, fileLock);
+                                    }
+                                }
+
+                                lock (fileLock)
+                                {
+                                    File.WriteAllText(filePath, text);
+                                }
+                                _cache.Add(fileName);
+                                toLog += "TRANSLATED TO .txt and is placed in cache folder";
+                                this.SendResponse(httpListenerContext, "TRANSLATED TO .txt and is placed in cache folder", true);
+                                return;
+
                             }
 
-                            
+
                         }
                         catch (Exception e)
                         {
-                            lock(_lock)
+                            lock (_lock)
                             {
                                 Console.WriteLine(e.ToString());
+                                this.WriteBreakLine();
+                            }
+                        }
+                        finally
+                        {
+                            lock (_lock)
+                            {
+                                if(toLog!="")
+                                {
+                                    Console.WriteLine($"\n{toLog}\n");
+                                }
+                                
                                 this.WriteBreakLine();
                             }
                         }
@@ -128,15 +184,15 @@ namespace Projekat1
                 }
             }
         }
-        
-        private void SendResponse(HttpListenerContext context,string content, bool isOK)
+
+        private void SendResponse(HttpListenerContext context, string content, bool isOK)
         {
             HttpListenerResponse response = context.Response;
             string responseString = $"<html><body><h1>{content}</h1></body></html>";
             byte[] buffer = System.Text.Encoding.UTF8.GetBytes(responseString);
             try
             {
-                response.StatusCode=isOK? (int)HttpStatusCode.OK : (int)HttpStatusCode.BadRequest;
+                response.StatusCode = isOK ? (int)HttpStatusCode.OK : (int)HttpStatusCode.BadRequest;
                 response.ContentLength64 = buffer.Length;
                 response.OutputStream.Write(buffer, 0, buffer.Length);
             }
@@ -148,14 +204,14 @@ namespace Projekat1
                     this.WriteBreakLine();
                 }
             }
-            finally 
+            finally
             {
                 response.OutputStream.Close();
             }
         }
-        private string ValidateRequest(HttpListenerContext context,string fileName,string fileExtension)
+        private string ValidateRequest(HttpListenerContext context, string fileName, string fileExtension)
         {
-            if (fileName == string.Empty||fileExtension==string.Empty)
+            if (fileName == string.Empty || fileExtension == string.Empty)
                 return "NO FILE NAME OR EXTENSION";
             if (!fileExtension.Equals("bin") && !fileExtension.Equals("txt"))
                 return "WRONG EXTENSION";
