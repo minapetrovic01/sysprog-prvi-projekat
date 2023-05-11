@@ -82,7 +82,6 @@ namespace Projekat1
                                 return;
                             }
 
-                            //u ovom poslednjem slucaju prevodim file
                             string toTranslate = files[0];
                             string newFileName = Path.GetFileNameWithoutExtension(fileName);
 
@@ -126,13 +125,12 @@ namespace Projekat1
                                     File.WriteAllBytes(filePath, fileBytes);
                                 }
                                 _cache.Add(fileName);
-                                toLog += "TRANSLATED TO .bin and is placed in cache folder";
-                                this.SendResponse(httpListenerContext, "TRANSLATED TO .bin and is placed in cache folder", true);
+                                toLog += "TRANSLATED TO .bin";
+                                this.SendResponse(httpListenerContext, "TRANSLATED TO .bin", true);
                                 return;
                             }
                             else
                             {
-
                                 newFileName += ".txt";
                                 string filePath = _cachedFilesPath + "/" + newFileName;
                                 object fileLock;
@@ -152,19 +150,22 @@ namespace Projekat1
                                     File.WriteAllText(filePath, text);
                                 }
                                 _cache.Add(fileName);
-                                toLog += "TRANSLATED TO .txt and is placed in cache folder";
-                                this.SendResponse(httpListenerContext, "TRANSLATED TO .txt and is placed in cache folder", true);
+                                toLog += "TRANSLATED TO .txt";
+                                this.SendResponse(httpListenerContext, "TRANSLATED TO .txt", true);
                                 return;
 
                             }
-
-
                         }
                         catch (Exception e)
                         {
                             lock (_lock)
                             {
                                 Console.WriteLine(e.ToString());
+                                using (StreamWriter sw = File.AppendText("../../../logFile.txt"))
+                                {
+                                    sw.WriteLine(toLog+'\n');
+                                    sw.WriteLine("-------------------------");
+                                }
                                 this.WriteBreakLine();
                             }
                         }
@@ -175,6 +176,11 @@ namespace Projekat1
                                 if(toLog!="")
                                 {
                                     Console.WriteLine($"\n{toLog}\n");
+                                    using (StreamWriter sw = File.AppendText("../../../logFile.txt"))
+                                    {
+                                        sw.WriteLine(toLog + '\n');
+                                        sw.WriteLine("-------------------------");
+                                    }
                                 }
                                 
                                 this.WriteBreakLine();

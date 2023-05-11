@@ -1,0 +1,42 @@
+
+NEW REQUEST
+Requested filename is:test20.bin
+VALID=OK
+TRANSLATED TO .txt
+
+-------------------------
+
+NEW REQUEST
+Requested filename is:favicon.ico
+VALID=WRONG EXTENSION
+
+
+-------------------------
+
+NEW REQUEST
+Requested filename is:test20.
+VALID=NO FILE NAME OR EXTENSION
+
+
+-------------------------
+
+NEW REQUEST
+Requested filename is:favicon.ico
+VALID=WRONG EXTENSION
+
+
+-------------------------
+
+NEW REQUEST
+Requested filename is:test20.mmm
+VALID=WRONG EXTENSION
+
+
+-------------------------
+
+NEW REQUEST
+Requested filename is:favicon.ico
+VALID=WRONG EXTENSION
+
+
+-------------------------
